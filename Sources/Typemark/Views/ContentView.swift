@@ -1,32 +1,15 @@
 import SwiftUI
 
-// MARK: - ContentView
-
-/// Root view for the Markdown editor. Renders an adaptive split-pane layout:
-/// - macOS: `HSplitView` with resizable divider
-/// - iPadOS: `NavigationSplitView` with sidebar/detail columns
-///
-/// The view owns an `EditorViewModel` and injects it into child views.
 struct ContentView: View {
-
-    // MARK: Document binding
 
     @Binding var document: MarkdownDocument
     var fileURL: URL?
 
-    // MARK: View model
-
     @State private var viewModel = EditorViewModel()
-
-    // MARK: Environment
-
+    @State private var outlineScrollTarget: String? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    // MARK: Body
-
     var body: some View {
-        // Keep view model in sync with document.
-        // Document is the source of truth; view model mirrors it.
         Group {
 #if os(macOS)
             macOSLayout
@@ -34,16 +17,13 @@ struct ContentView: View {
             iPadLayout
 #endif
         }
-        // Sync: document → viewModel on appear
         .onAppear {
             viewModel.markdownText = document.text
             viewModel.documentURL = fileURL
         }
-        // Sync: viewModel → document on every change
         .onChange(of: viewModel.markdownText) { _, newValue in
             document.text = newValue
         }
-        // Sync: document → viewModel if external changes occur (e.g., file revert)
         .onChange(of: document.text) { _, newValue in
             if newValue != viewModel.markdownText {
                 viewModel.markdownText = newValue
@@ -52,29 +32,35 @@ struct ContentView: View {
         .markdownToolbar(viewModel: viewModel)
     }
 
-    // MARK: macOS layout
+    // MARK: - macOS layout
 
     @ViewBuilder
     private var macOSLayout: some View {
-        if viewModel.showPreview {
-            HSplitView {
-                EditorPaneView(viewModel: viewModel)
-                    .frame(minWidth: 280)
-
-                PreviewPaneView(viewModel: viewModel)
-                    .frame(minWidth: 280)
+        HStack(spacing: 0) {
+            if viewModel.showOutline {
+                outlineSidebar
+                    .frame(width: 220)
+                Divider()
             }
-        } else {
-            EditorPaneView(viewModel: viewModel)
+
+            if viewModel.showPreview {
+                HSplitView {
+                    EditorPaneView(viewModel: viewModel)
+                        .frame(minWidth: 280)
+                    PreviewPaneView(viewModel: viewModel)
+                        .frame(minWidth: 280)
+                }
+            } else {
+                EditorPaneView(viewModel: viewModel)
+            }
         }
     }
 
-    // MARK: iPad layout
+    // MARK: - iPad layout
 
     @ViewBuilder
     private var iPadLayout: some View {
         if horizontalSizeClass == .compact || !viewModel.showPreview {
-            // Compact: show picker to switch between panes
             VStack(spacing: 0) {
                 Picker("Pane", selection: $viewModel.selectedPane) {
                     ForEach(EditorViewModel.Pane.allCases, id: \.self) { pane in
@@ -84,20 +70,15 @@ struct ContentView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
                 .padding(.vertical, 8)
-
                 Divider()
-
                 Group {
                     switch viewModel.selectedPane {
-                    case .editor:
-                        EditorPaneView(viewModel: viewModel)
-                    case .preview:
-                        PreviewPaneView(viewModel: viewModel)
+                    case .editor: EditorPaneView(viewModel: viewModel)
+                    case .preview: PreviewPaneView(viewModel: viewModel)
                     }
                 }
             }
         } else {
-            // Regular width: side-by-side
             NavigationSplitView {
                 EditorPaneView(viewModel: viewModel)
                     .navigationTitle("Editor")
@@ -112,5 +93,42 @@ struct ContentView: View {
 #endif
             }
         }
+    }
+
+    // MARK: - Outline sidebar
+
+    private var outlineSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Outline")
+                .font(.headline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(viewModel.headings.enumerated()), id: \.offset) { _, heading in
+                        Button {
+                            outlineScrollTarget = heading.slug
+                        } label: {
+                            Text(heading.text)
+                                .font(heading.level <= 2 ? .body.bold() : .body)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                                .padding(.leading, CGFloat(heading.level - 1) * 12)
+                                .padding(.vertical, 4)
+                                .padding(.horizontal, 12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
+        .background(.ultraThinMaterial)
     }
 }

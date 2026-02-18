@@ -1,55 +1,46 @@
 import SwiftUI
 
-// MARK: - ToolbarContent for MarkdownEditor
-
-/// Provides toolbar items for the Markdown editor scene.
-///
-/// Uses `.toolbar` modifier pattern — call `markdownToolbar(viewModel:)` on a view.
 struct MarkdownToolbarContent: ToolbarContent {
 
     @Bindable var viewModel: EditorViewModel
 
     var body: some ToolbarContent {
-        // Leading group: formatting actions
         ToolbarItemGroup(placement: toolbarLeadingPlacement) {
             headingMenu
             Divider()
             boldButton
             italicButton
+            strikethroughButton
+            highlightButton
             Divider()
             codeButton
             linkButton
+            imageButton
             Divider()
             blockquoteButton
+            tableButton
+            taskListButton
+            hrButton
         }
 
-        // Trailing group: view toggle
         ToolbarItemGroup(placement: .automatic) {
+            outlineToggle
+            focusToggle
             previewToggle
+            exportMenu
         }
     }
-
-    // MARK: - Heading menu
 
     private var headingMenu: some View {
         Menu {
             ForEach(1...6, id: \.self) { level in
-                Button {
-                    viewModel.applyHeading(level: level)
-                } label: {
-                    Label(
-                        "Heading \(level)",
-                        systemImage: "textformat.size.larger"
-                    )
-                }
+                Button("H\(level)") { viewModel.applyHeading(level: level) }
             }
         } label: {
             Label("Heading", systemImage: "textformat.size")
         }
         .help("Insert heading")
     }
-
-    // MARK: - Format buttons
 
     private var boldButton: some View {
         Button {
@@ -69,6 +60,26 @@ struct MarkdownToolbarContent: ToolbarContent {
         }
         .help("Italic (Cmd+I)")
         .keyboardShortcut("i", modifiers: .command)
+    }
+
+    private var strikethroughButton: some View {
+        Button {
+            viewModel.insertStrikethrough()
+        } label: {
+            Label("Strikethrough", systemImage: "strikethrough")
+        }
+        .help("Strikethrough (Cmd+Shift+X)")
+        .keyboardShortcut("x", modifiers: [.command, .shift])
+    }
+
+    private var highlightButton: some View {
+        Button {
+            viewModel.insertHighlight()
+        } label: {
+            Label("Highlight", systemImage: "highlighter")
+        }
+        .help("Highlight (Cmd+Shift+H)")
+        .keyboardShortcut("h", modifiers: [.command, .shift])
     }
 
     private var codeButton: some View {
@@ -91,6 +102,15 @@ struct MarkdownToolbarContent: ToolbarContent {
         .keyboardShortcut("k", modifiers: .command)
     }
 
+    private var imageButton: some View {
+        Button {
+            viewModel.insertImage()
+        } label: {
+            Label("Image", systemImage: "photo")
+        }
+        .help("Insert image")
+    }
+
     private var blockquoteButton: some View {
         Button {
             viewModel.insertBlockquote()
@@ -100,7 +120,60 @@ struct MarkdownToolbarContent: ToolbarContent {
         .help("Insert blockquote")
     }
 
-    // MARK: - Preview toggle
+    private var tableButton: some View {
+        Button {
+            viewModel.insertTable()
+        } label: {
+            Label("Table", systemImage: "tablecells")
+        }
+        .help("Insert table")
+    }
+
+    private var taskListButton: some View {
+        Button {
+            viewModel.insertTaskList()
+        } label: {
+            Label("Task List", systemImage: "checklist")
+        }
+        .help("Insert task list")
+    }
+
+    private var hrButton: some View {
+        Button {
+            viewModel.insertHorizontalRule()
+        } label: {
+            Label("Horizontal Rule", systemImage: "minus")
+        }
+        .help("Insert horizontal rule")
+    }
+
+    private var outlineToggle: some View {
+        Button {
+            viewModel.showOutline.toggle()
+        } label: {
+            Label(
+                viewModel.showOutline ? "Hide Outline" : "Show Outline",
+                systemImage: "list.bullet.indent"
+            )
+        }
+        .help("Toggle document outline (Cmd+Shift+O)")
+        .keyboardShortcut("o", modifiers: [.command, .shift])
+    }
+
+    private var focusToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                viewModel.focusMode.toggle()
+            }
+        } label: {
+            Label(
+                viewModel.focusMode ? "Exit Focus" : "Focus Mode",
+                systemImage: viewModel.focusMode ? "eye.fill" : "eye"
+            )
+        }
+        .help("Toggle focus mode (Cmd+Shift+F)")
+        .keyboardShortcut("f", modifiers: [.command, .shift])
+    }
 
     private var previewToggle: some View {
         Button {
@@ -111,11 +184,43 @@ struct MarkdownToolbarContent: ToolbarContent {
                 systemImage: viewModel.showPreview ? "rectangle.lefthalf.filled" : "rectangle"
             )
         }
-        .help("Toggle preview pane")
+        .help("Toggle preview (Cmd+Shift+P)")
         .keyboardShortcut("p", modifiers: [.command, .shift])
     }
 
-    // MARK: - Platform placement
+    private var exportMenu: some View {
+        Menu {
+            Button("Export HTML…") { exportHTML() }
+            Button("Export PDF…") { exportPDF() }
+        } label: {
+            Label("Export", systemImage: "square.and.arrow.up")
+        }
+        .help("Export document")
+    }
+
+    private func exportHTML() {
+        let html = viewModel.exportHTML()
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.html]
+        panel.nameFieldStringValue = "document.html"
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                try? html.write(to: url, atomically: true, encoding: .utf8)
+            }
+        }
+    }
+
+    private func exportPDF() {
+        let html = viewModel.exportHTML()
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = "document.pdf"
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                PDFRenderer.render(html: html, to: url)
+            }
+        }
+    }
 
     private var toolbarLeadingPlacement: ToolbarItemPlacement {
 #if os(macOS)
@@ -125,8 +230,6 @@ struct MarkdownToolbarContent: ToolbarContent {
 #endif
     }
 }
-
-// MARK: - View extension for ergonomic usage
 
 extension View {
     func markdownToolbar(viewModel: EditorViewModel) -> some View {

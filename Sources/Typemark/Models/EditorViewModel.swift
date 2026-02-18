@@ -1,100 +1,121 @@
 import Foundation
 import SwiftUI
 
-// MARK: - EditorViewModel
-
-/// Observable coordinator that bridges the `MarkdownDocument` binding
-/// to the editor and preview panes.
-///
-/// Marked `@MainActor` to satisfy Swift 6 strict concurrency — all mutations
-/// happen on the main thread since they drive SwiftUI updates.
 @MainActor
 @Observable
 final class EditorViewModel {
 
-    // MARK: Published state
-
-    /// The raw Markdown text currently shown in the editor.
-    /// Modifications here update both the editor pane and the live preview.
     var markdownText: String = ""
-
-    /// Controls whether the editor or preview pane is focused (iPad compact mode).
     var selectedPane: Pane = .editor
-
-    /// Whether the preview is shown side-by-side (true) or fullscreen (false).
     var showPreview: Bool = true
-
-    /// The URL of the currently open document file (used to resolve relative image paths).
+    var showOutline: Bool = false
+    var focusMode: Bool = false
     var documentURL: URL? = nil
-
-    /// The current insertion point / selection range used by formatting helpers.
-    /// Stored as a plain range of the string's indices; updated by EditorPaneView.
-    var selectedRange: Range<String.Index>? = nil
-
-    // MARK: Pane enum
 
     enum Pane: String, CaseIterable {
         case editor = "Editor"
         case preview = "Preview"
     }
 
-    // MARK: Formatting actions
+    // MARK: - Statistics
 
-    /// Wraps the currently selected text (or inserts placeholder) with `syntax`.
-    ///
-    /// - Parameters:
-    ///   - prefix: The opening Markdown syntax string (e.g. `**`).
-    ///   - suffix: The closing Markdown syntax string (e.g. `**`).
-    ///   - placeholder: Text to insert when there is no selection.
-    func applyInlineFormat(prefix: String, suffix: String, placeholder: String) {
-        if let range = selectedRange, !range.isEmpty {
-            let selected = String(markdownText[range])
-            let replacement = prefix + selected + suffix
-            markdownText.replaceSubrange(range, with: replacement)
-            // Move selection past the newly inserted prefix
-            if let newStart = markdownText.index(range.lowerBound, offsetBy: prefix.count, limitedBy: markdownText.endIndex) {
-                let newEnd = markdownText.index(newStart, offsetBy: selected.count, limitedBy: markdownText.endIndex) ?? newStart
-                selectedRange = newStart..<newEnd
+    var wordCount: Int {
+        let words = markdownText.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+        return words.count
+    }
+
+    var characterCount: Int {
+        markdownText.count
+    }
+
+    var readingTime: String {
+        let minutes = max(1, wordCount / 238)
+        return "\(minutes) min read"
+    }
+
+    // MARK: - Outline
+
+    var headings: [(level: Int, text: String, slug: String)] {
+        markdownText.components(separatedBy: "\n").compactMap { line in
+            for level in (1...6).reversed() {
+                let prefix = String(repeating: "#", count: level) + " "
+                if line.hasPrefix(prefix) {
+                    let text = String(line.dropFirst(prefix.count))
+                    let slug = text.lowercased()
+                        .replacingOccurrences(of: " ", with: "-")
+                        .filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+                    return (level, text, slug)
+                }
             }
-        } else {
-            // No selection — insert markers with placeholder
-            insertAtCursor(prefix + placeholder + suffix)
+            return nil
         }
     }
 
-    /// Inserts a heading prefix at the beginning of the current line.
+    // MARK: - Formatting actions
+
+    func applyInlineFormat(prefix: String, suffix: String, placeholder: String) {
+        insertAtCursor(prefix + placeholder + suffix)
+    }
+
     func applyHeading(level: Int) {
         let prefix = String(repeating: "#", count: level) + " "
-        insertAtCursor(prefix)
+        insertAtCursor("\n" + prefix)
     }
 
-    /// Inserts a link skeleton `[text](url)`.
     func insertLink() {
-        if let range = selectedRange, !range.isEmpty {
-            let selected = String(markdownText[range])
-            markdownText.replaceSubrange(range, with: "[\(selected)](url)")
-        } else {
-            insertAtCursor("[link text](url)")
-        }
+        insertAtCursor("[link text](url)")
     }
 
-    /// Inserts a fenced code block.
     func insertCodeBlock() {
         insertAtCursor("```\ncode here\n```")
     }
 
-    /// Inserts a blockquote prefix.
     func insertBlockquote() {
-        insertAtCursor("> ")
+        insertAtCursor("\n> ")
     }
 
-    // MARK: Private helpers
+    func insertStrikethrough() {
+        insertAtCursor("~~text~~")
+    }
+
+    func insertHighlight() {
+        insertAtCursor("==highlighted==")
+    }
+
+    func insertTaskList() {
+        insertAtCursor("\n- [ ] ")
+    }
+
+    func insertTable() {
+        insertAtCursor("\n| Column 1 | Column 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |\n")
+    }
+
+    func insertHorizontalRule() {
+        insertAtCursor("\n---\n")
+    }
+
+    func insertImage() {
+        insertAtCursor("![alt text](image.png)")
+    }
+
+    // MARK: - Toggle task checkbox
+
+    func toggleCheckbox(at lineContent: String) {
+        if let range = markdownText.range(of: "- [ ] " + lineContent) {
+            markdownText.replaceSubrange(range, with: "- [x] " + lineContent)
+        } else if let range = markdownText.range(of: "- [x] " + lineContent) {
+            markdownText.replaceSubrange(range, with: "- [ ] " + lineContent)
+        }
+    }
+
+    // MARK: - Export
+
+    func exportHTML() -> String {
+        HTMLExporter.export(markdownText)
+    }
 
     private func insertAtCursor(_ text: String) {
-        if let range = selectedRange {
-            markdownText.insert(contentsOf: text, at: range.lowerBound)
-        } else {
-            markdownText.append(text)
-        }
+        markdownText.append(text)
     }
 }

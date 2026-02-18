@@ -2,25 +2,14 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - UTType extension
-
 extension UTType {
-    /// Markdown plain-text document type.
     static let markdown = UTType(
         exportedAs: "net.daringfireball.markdown",
         conformingTo: .plainText
     )
 }
 
-// MARK: - MarkdownDocument
-
-/// A SwiftUI `FileDocument` that stores a single Markdown text file.
-///
-/// This is the source of truth for document content. The `DocumentGroup` scene
-/// manages the document lifecycle (open, save, close, undo).
 struct MarkdownDocument: FileDocument {
-
-    // MARK: Supported content types
 
     static var readableContentTypes: [UTType] {
         [.markdown, .plainText]
@@ -30,18 +19,11 @@ struct MarkdownDocument: FileDocument {
         [.markdown, .plainText]
     }
 
-    // MARK: Properties
-
-    /// The raw Markdown text content.
     var text: String
-
-    // MARK: Initialization
 
     init(text: String = Self.defaultContent) {
         self.text = text
     }
-
-    // MARK: FileDocument conformance
 
     init(configuration: ReadConfiguration) throws {
         guard
@@ -60,34 +42,51 @@ struct MarkdownDocument: FileDocument {
         return FileWrapper(regularFileWithContents: data)
     }
 
-    // MARK: Default content
-
     static let defaultContent = """
-    # Welcome to Typemark
+# Welcome to Typemark
 
-    Start writing your Markdown here. The preview updates automatically.
+Start writing your Markdown here. The preview updates automatically.
 
-    ## Features
+## Features
 
-    - **Bold** and *italic* text
-    - `Inline code` and fenced code blocks
-    - [Links](https://example.com) and images
-    - Blockquotes and lists
-    - Headings H1–H6
+- **Bold** and *italic* text
+- ~~Strikethrough~~ and ==highlighted== text
+- `Inline code` and fenced code blocks
+- [Links](https://example.com) and images
+- Blockquotes and lists
+- Headings H1–H6
+- Tables with column alignment
+- Task lists with interactive checkboxes
+- Footnotes[^1]
+- Superscript^sup^ and subscript~sub~
 
-    ## Code Example
+## Task List
 
-    ```swift
-    let greeting = "Hello, Markdown!"
-    print(greeting)
-    ```
+- [x] Create the editor
+- [x] Add live preview
+- [ ] Write something amazing
 
-    ## Blockquote
+## Code Example
 
-    > Great things are built one line at a time.
+```swift
+let greeting = "Hello, Markdown!"
+print(greeting)
+```
 
-    ---
+## Callouts
 
-    Happy writing!
-    """
+> [!NOTE]
+> This is a helpful note.
+
+> [!TIP]
+> Try toggling focus mode with Cmd+Shift+F.
+
+> Great things are built one line at a time.
+
+---
+
+[^1]: Footnotes appear at the bottom of the preview.
+
+Happy writing!
+"""
 }
