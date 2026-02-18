@@ -3,40 +3,42 @@ import SwiftUI
 
 @MainActor
 @Observable
-final class EditorViewModel {
+public final class EditorViewModel {
 
-    var markdownText: String = ""
-    var selectedPane: Pane = .editor
-    var showPreview: Bool = true
-    var showOutline: Bool = false
-    var focusMode: Bool = false
-    var documentURL: URL? = nil
+    public var markdownText: String = ""
+    public var selectedPane: Pane = .editor
+    public var showPreview: Bool = true
+    public var showOutline: Bool = false
+    public var focusMode: Bool = false
+    public var documentURL: URL? = nil
 
-    enum Pane: String, CaseIterable {
+    public init() {}
+
+    public enum Pane: String, CaseIterable {
         case editor = "Editor"
         case preview = "Preview"
     }
 
     // MARK: - Statistics
 
-    var wordCount: Int {
+    public var wordCount: Int {
         let words = markdownText.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
         return words.count
     }
 
-    var characterCount: Int {
+    public var characterCount: Int {
         markdownText.count
     }
 
-    var readingTime: String {
+    public var readingTime: String {
         let minutes = max(1, wordCount / 238)
         return "\(minutes) min read"
     }
 
     // MARK: - Outline
 
-    var headings: [(level: Int, text: String, slug: String)] {
+    public var headings: [(level: Int, text: String, slug: String)] {
         markdownText.components(separatedBy: "\n").compactMap { line in
             for level in (1...6).reversed() {
                 let prefix = String(repeating: "#", count: level) + " "
@@ -54,54 +56,54 @@ final class EditorViewModel {
 
     // MARK: - Formatting actions
 
-    func applyInlineFormat(prefix: String, suffix: String, placeholder: String) {
+    public func applyInlineFormat(prefix: String, suffix: String, placeholder: String) {
         insertAtCursor(prefix + placeholder + suffix)
     }
 
-    func applyHeading(level: Int) {
+    public func applyHeading(level: Int) {
         let prefix = String(repeating: "#", count: level) + " "
         insertAtCursor("\n" + prefix)
     }
 
-    func insertLink() {
+    public func insertLink() {
         insertAtCursor("[link text](url)")
     }
 
-    func insertCodeBlock() {
+    public func insertCodeBlock() {
         insertAtCursor("```\ncode here\n```")
     }
 
-    func insertBlockquote() {
+    public func insertBlockquote() {
         insertAtCursor("\n> ")
     }
 
-    func insertStrikethrough() {
+    public func insertStrikethrough() {
         insertAtCursor("~~text~~")
     }
 
-    func insertHighlight() {
+    public func insertHighlight() {
         insertAtCursor("==highlighted==")
     }
 
-    func insertTaskList() {
+    public func insertTaskList() {
         insertAtCursor("\n- [ ] ")
     }
 
-    func insertTable() {
+    public func insertTable() {
         insertAtCursor("\n| Column 1 | Column 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |\n")
     }
 
-    func insertHorizontalRule() {
+    public func insertHorizontalRule() {
         insertAtCursor("\n---\n")
     }
 
-    func insertImage() {
+    public func insertImage() {
         insertAtCursor("![alt text](image.png)")
     }
 
     // MARK: - Toggle task checkbox
 
-    func toggleCheckbox(at lineContent: String) {
+    public func toggleCheckbox(at lineContent: String) {
         if let range = markdownText.range(of: "- [ ] " + lineContent) {
             markdownText.replaceSubrange(range, with: "- [x] " + lineContent)
         } else if let range = markdownText.range(of: "- [x] " + lineContent) {
@@ -111,7 +113,7 @@ final class EditorViewModel {
 
     // MARK: - Export
 
-    func exportHTML() -> String {
+    public func exportHTML() -> String {
         HTMLExporter.export(markdownText)
     }
 

@@ -1,11 +1,11 @@
 import SwiftUI
 
-struct EditorPaneView: View {
+public struct EditorPaneView: View {
 
     @Bindable var viewModel: EditorViewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             TextEditor(text: $viewModel.markdownText)
                 .font(.system(.body, design: .monospaced))

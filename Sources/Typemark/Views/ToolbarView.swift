@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct MarkdownToolbarContent: ToolbarContent {
+public struct MarkdownToolbarContent: ToolbarContent {
 
     @Bindable var viewModel: EditorViewModel
 
-    var body: some ToolbarContent {
+    public var body: some ToolbarContent {
         ToolbarItemGroup(placement: toolbarLeadingPlacement) {
             headingMenu
             Divider()
@@ -231,7 +231,7 @@ struct MarkdownToolbarContent: ToolbarContent {
     }
 }
 
-extension View {
+public extension View {
     func markdownToolbar(viewModel: EditorViewModel) -> some View {
         toolbar {
             MarkdownToolbarContent(viewModel: viewModel)

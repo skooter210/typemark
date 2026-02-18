@@ -1,15 +1,20 @@
 import SwiftUI
 
-struct ContentView: View {
+public struct ContentView: View {
 
     @Binding var document: MarkdownDocument
     var fileURL: URL?
+
+    public init(document: Binding<MarkdownDocument>, fileURL: URL? = nil) {
+        self._document = document
+        self.fileURL = fileURL
+    }
 
     @State private var viewModel = EditorViewModel()
     @State private var outlineScrollTarget: String? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    var body: some View {
+    public var body: some View {
         Group {
 #if os(macOS)
             macOSLayout

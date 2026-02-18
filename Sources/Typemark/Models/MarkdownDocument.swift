@@ -2,30 +2,30 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-extension UTType {
+public extension UTType {
     static let markdown = UTType(
         exportedAs: "net.daringfireball.markdown",
         conformingTo: .plainText
     )
 }
 
-struct MarkdownDocument: FileDocument {
+public struct MarkdownDocument: FileDocument {
 
-    static var readableContentTypes: [UTType] {
+    public static var readableContentTypes: [UTType] {
         [.markdown, .plainText]
     }
 
-    static var writableContentTypes: [UTType] {
+    public static var writableContentTypes: [UTType] {
         [.markdown, .plainText]
     }
 
-    var text: String
+    public var text: String
 
-    init(text: String = Self.defaultContent) {
+    public init(text: String = Self.defaultContent) {
         self.text = text
     }
 
-    init(configuration: ReadConfiguration) throws {
+    public init(configuration: ReadConfiguration) throws {
         guard
             let data = configuration.file.regularFileContents,
             let string = String(data: data, encoding: .utf8)
@@ -35,14 +35,14 @@ struct MarkdownDocument: FileDocument {
         self.text = string
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    public func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
         guard let data = text.data(using: .utf8) else {
             throw CocoaError(.fileWriteInapplicableStringEncoding)
         }
         return FileWrapper(regularFileWithContents: data)
     }
 
-    static let defaultContent = """
+    public static let defaultContent = """
 # Welcome to Typemark
 
 Start writing your Markdown here. The preview updates automatically.

@@ -8,15 +8,26 @@ let package = Package(
         .iOS(.v26),
     ],
     targets: [
-        .executableTarget(
-            name: "Typemark",
+        .target(
+            name: "TypemarkCore",
             path: "Sources/Typemark",
             exclude: [
+                "App/TypemarkApp.swift",
                 "App/README.md",
                 "Views/README.md",
                 "Models/README.md",
                 "Utilities/README.md",
             ]
+        ),
+        .executableTarget(
+            name: "Typemark",
+            dependencies: ["TypemarkCore"],
+            path: "Sources/TypemarkApp"
+        ),
+        .testTarget(
+            name: "TypemarkTests",
+            dependencies: ["TypemarkCore"],
+            path: "Tests/TypemarkTests"
         ),
     ]
 )

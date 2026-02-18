@@ -1,8 +1,8 @@
 import Foundation
 
-enum HTMLExporter {
+public enum HTMLExporter {
 
-    static func export(_ markdown: String) -> String {
+    public static func export(_ markdown: String) -> String {
         let bodyHTML = convertToHTML(markdown)
         return """
         <!DOCTYPE html>
@@ -38,7 +38,9 @@ enum HTMLExporter {
             if line.hasPrefix("```") {
                 if inCode {
                     let escaped = codeBuffer.joined(separator: "\n").htmlEscaped
-                    html.append("<pre><code class=\"language-\(codeLang)\">\(escaped)</code></pre>")
+                    let safeLang = codeLang.htmlEscaped.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+                    let langAttr = safeLang.isEmpty ? "" : " class=\"language-\(safeLang)\""
+                    html.append("<pre><code\(langAttr)>\(escaped)</code></pre>")
                     inCode = false
                     codeBuffer = []
                     codeLang = ""
@@ -79,24 +81,24 @@ enum HTMLExporter {
 
             // Task items
             if trimmed.hasPrefix("- [x] ") || trimmed.hasPrefix("- [X] ") {
-                html.append("<p><input type=\"checkbox\" checked disabled> \(inlineHTML(String(trimmed.dropFirst(6))))</p>")
+                html.append("<p><input type=\"checkbox\" checked disabled> \(inlineHTML(String(trimmed.dropFirst(6)).htmlEscaped))</p>")
                 i += 1; continue
             }
             if trimmed.hasPrefix("- [ ] ") {
-                html.append("<p><input type=\"checkbox\" disabled> \(inlineHTML(String(trimmed.dropFirst(6))))</p>")
+                html.append("<p><input type=\"checkbox\" disabled> \(inlineHTML(String(trimmed.dropFirst(6)).htmlEscaped))</p>")
                 i += 1; continue
             }
 
             // Blockquote
             if line.hasPrefix(">") {
                 let content = line.hasPrefix("> ") ? String(line.dropFirst(2)) : String(line.dropFirst(1))
-                html.append("<blockquote><p>\(inlineHTML(content))</p></blockquote>")
+                html.append("<blockquote><p>\(inlineHTML(content.htmlEscaped))</p></blockquote>")
                 i += 1; continue
             }
 
             // List items
             if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") || trimmed.hasPrefix("+ ") {
-                html.append("<li>\(inlineHTML(String(trimmed.dropFirst(2))))</li>")
+                html.append("<li>\(inlineHTML(String(trimmed.dropFirst(2)).htmlEscaped))</li>")
                 i += 1; continue
             }
 
@@ -107,13 +109,15 @@ enum HTMLExporter {
             }
 
             // Paragraph
-            html.append("<p>\(inlineHTML(line))</p>")
+            html.append("<p>\(inlineHTML(line.htmlEscaped))</p>")
             i += 1
         }
 
         if inCode {
             let escaped = codeBuffer.joined(separator: "\n").htmlEscaped
-            html.append("<pre><code class=\"language-\(codeLang)\">\(escaped)</code></pre>")
+            let safeLang = codeLang.htmlEscaped.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+            let langAttr = safeLang.isEmpty ? "" : " class=\"language-\(safeLang)\""
+            html.append("<pre><code\(langAttr)>\(escaped)</code></pre>")
         }
 
         return html.joined(separator: "\n")
@@ -141,15 +145,56 @@ enum HTMLExporter {
         result = result.replacingOccurrences(
             of: #"`([^`]+)`"#, with: "<code>$1</code>",
             options: .regularExpression)
+        // Images (before links to avoid conflict)
+        result = sanitizeImageTags(result)
         // Links
-        result = result.replacingOccurrences(
-            of: #"\[([^\]]+)\]\(([^)]+)\)"#, with: "<a href=\"$2\">$1</a>",
-            options: .regularExpression)
-        // Images
-        result = result.replacingOccurrences(
-            of: #"!\[([^\]]*)\]\(([^)]+)\)"#, with: "<img src=\"$2\" alt=\"$1\">",
-            options: .regularExpression)
+        result = sanitizeLinkTags(result)
         return result
+    }
+
+    private static func sanitizeLinkTags(_ text: String) -> String {
+        let pattern = try! NSRegularExpression(pattern: #"\[([^\]]+)\]\(([^)]+)\)"#)
+        let ns = text as NSString
+        var result = text
+        let matches = pattern.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        for match in matches.reversed() {
+            let linkText = ns.substring(with: match.range(at: 1))
+            let href = ns.substring(with: match.range(at: 2))
+            let fullRange = Range(match.range, in: result)!
+            if isSafeURL(href) {
+                result.replaceSubrange(fullRange, with: "<a href=\"\(href)\">\(linkText)</a>")
+            } else {
+                result.replaceSubrange(fullRange, with: linkText)
+            }
+        }
+        return result
+    }
+
+    private static func sanitizeImageTags(_ text: String) -> String {
+        let pattern = try! NSRegularExpression(pattern: #"!\[([^\]]*)\]\(([^)]+)\)"#)
+        let ns = text as NSString
+        var result = text
+        let matches = pattern.matches(in: text, range: NSRange(location: 0, length: ns.length))
+        for match in matches.reversed() {
+            let alt = ns.substring(with: match.range(at: 1))
+            let src = ns.substring(with: match.range(at: 2))
+            let fullRange = Range(match.range, in: result)!
+            if isSafeURL(src) {
+                result.replaceSubrange(fullRange, with: "<img src=\"\(src)\" alt=\"\(alt)\">")
+            } else {
+                result.replaceSubrange(fullRange, with: alt)
+            }
+        }
+        return result
+    }
+
+    private static func isSafeURL(_ urlString: String) -> Bool {
+        let trimmed = urlString.trimmingCharacters(in: .whitespaces).lowercased()
+        // Block javascript:, data:, and vbscript: schemes
+        if trimmed.hasPrefix("javascript:") || trimmed.hasPrefix("vbscript:") || trimmed.hasPrefix("data:") {
+            return false
+        }
+        return true
     }
 
     private static let css = """
@@ -212,11 +257,12 @@ enum HTMLExporter {
     """
 }
 
-private extension String {
+extension String {
     var htmlEscaped: String {
         self.replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
             .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&#39;")
     }
 }
