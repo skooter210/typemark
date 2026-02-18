@@ -24,6 +24,9 @@ final class EditorViewModel {
     /// Whether the preview is shown side-by-side (true) or fullscreen (false).
     var showPreview: Bool = true
 
+    /// The URL of the currently open document file (used to resolve relative image paths).
+    var documentURL: URL? = nil
+
     /// The current insertion point / selection range used by formatting helpers.
     /// Stored as a plain range of the string's indices; updated by EditorPaneView.
     var selectedRange: Range<String.Index>? = nil

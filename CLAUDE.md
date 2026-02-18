@@ -1,4 +1,4 @@
-# CLAUDE.md — MarkdownEditor
+# CLAUDE.md — Typemark
 
 ## Build Commands
 
@@ -35,8 +35,12 @@ open Package.swift
 
 - `DocumentGroup` scene manages file lifecycle (open/save/new)
 - `MarkdownDocument` implements `FileDocument` — the model layer
-- `MarkdownEditorViewModel` (using `@Observable`) — coordinator between editor and preview
+- `EditorViewModel` (using `@Observable`) — coordinator between editor and preview
 - Views are pure SwiftUI — no UIKit/AppKit dependencies
+
+## Bundle ID
+
+`com.typemark.app`
 
 ## Coding Standards
 
@@ -48,7 +52,7 @@ open Package.swift
 
 ### File Organization
 ```
-Sources/MarkdownEditor/
+Sources/Typemark/
 ├── App/            # @main entry point, App struct, scene configuration
 ├── Views/          # All SwiftUI views
 ├── Models/         # Data models (FileDocument, etc.)
@@ -81,9 +85,11 @@ Sources/MarkdownEditor/
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Markdown rendering | `AttributedString(markdown:)` | Native Apple API, zero dependencies, supports inline formatting |
-| State management | `@Observable` macro | Swift 5.9+ standard, more ergonomic than ObservableObject |
-| Build system | SPM only (no .xcodeproj) | Matches requirement; fully portable; Xcode can open Package.swift |
-| Syntax highlighting | Manual `NSAttributedString` / `AttributedString` regex | No third-party deps; keeps bundle minimal |
-| Platform target | macOS 26, iOS 26 | Required by specification; enables latest SwiftUI APIs |
-| Architecture | DocumentGroup + FileDocument | Native document-based app; provides free undo, file management |
+| App name | Typemark | Unique, not taken on App Store |
+| Bundle ID | `com.typemark.app` | Clean, professional namespace |
+| Markdown rendering | `AttributedString(markdown:)` | Native Apple API, zero dependencies |
+| State management | `@Observable` macro | Swift 5.9+ standard, ergonomic |
+| Build system | SPM only (no .xcodeproj) | Portable; Xcode can open Package.swift |
+| Syntax highlighting | Manual regex → AttributedString | No third-party deps; minimal bundle |
+| Platform target | macOS 26, iOS 26 | Latest SwiftUI APIs |
+| Architecture | DocumentGroup + FileDocument | Native document-based app; free undo/file management |

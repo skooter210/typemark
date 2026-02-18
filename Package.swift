@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "MarkdownEditor",
+    name: "Typemark",
     platforms: [
         .macOS(.v26),
         .iOS(.v26),
     ],
     targets: [
         .executableTarget(
-            name: "MarkdownEditor",
-            path: "Sources/MarkdownEditor",
+            name: "Typemark",
+            path: "Sources/Typemark",
             exclude: [
                 "App/README.md",
                 "Views/README.md",

@@ -1,6 +1,8 @@
-# MarkdownEditor
+# Typemark
 
 A native macOS and iPadOS Markdown editor and live preview app built with SwiftUI and Swift 6.
+
+**Bundle ID:** `com.typemark.app`
 
 ## Features
 
@@ -49,12 +51,12 @@ open Package.swift
 ## Project Structure
 
 ```
-markdown_editor/
+typemark/
 ├── Package.swift                     # SPM manifest
 ├── Sources/
-│   └── MarkdownEditor/
+│   └── Typemark/
 │       ├── App/                      # Entry point and app configuration
-│       │   └── MarkdownEditorApp.swift
+│       │   └── TypemarkApp.swift
 │       ├── Views/                    # SwiftUI views
 │       │   ├── ContentView.swift
 │       │   ├── EditorPaneView.swift
@@ -67,7 +69,7 @@ markdown_editor/
 │           ├── SyntaxHighlighter.swift
 │           └── MarkdownFormatter.swift
 ├── CLAUDE.md                         # Developer guide
-└── MEMORY.md                         # Project state tracker
+└── README.md
 ```
 
 ## Architecture

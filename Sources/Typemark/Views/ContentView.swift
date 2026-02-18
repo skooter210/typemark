@@ -12,6 +12,7 @@ struct ContentView: View {
     // MARK: Document binding
 
     @Binding var document: MarkdownDocument
+    var fileURL: URL?
 
     // MARK: View model
 
@@ -36,6 +37,7 @@ struct ContentView: View {
         // Sync: document → viewModel on appear
         .onAppear {
             viewModel.markdownText = document.text
+            viewModel.documentURL = fileURL
         }
         // Sync: viewModel → document on every change
         .onChange(of: viewModel.markdownText) { _, newValue in

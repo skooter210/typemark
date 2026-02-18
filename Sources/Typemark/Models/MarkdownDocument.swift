@@ -63,7 +63,7 @@ struct MarkdownDocument: FileDocument {
     // MARK: Default content
 
     static let defaultContent = """
-    # Welcome to MarkdownEditor
+    # Welcome to Typemark
 
     Start writing your Markdown here. The preview updates automatically.
 
