@@ -55,6 +55,17 @@ public struct PreviewPaneView: View {
             if let scheme = url.scheme?.lowercased(), allowedSchemes.contains(scheme) {
                 return .systemAction
             }
+            // Handle relative document links (e.g. docs/system-architecture.md)
+            if url.scheme == nil || url.scheme == "file" {
+                if let resolved = resolveRelativeLink(url.relativeString) {
+                    #if canImport(AppKit)
+                    NSWorkspace.shared.open(resolved)
+                    #else
+                    return .systemAction(resolved)
+                    #endif
+                    return .handled
+                }
+            }
             return .discarded
         })
         .background(backgroundColor)
@@ -244,6 +255,26 @@ public struct PreviewPaneView: View {
                           : Color.black.opacity(0.04))
             )
         }
+    }
+
+    private func resolveRelativeLink(_ path: String) -> URL? {
+        let cleaned = path.removingPercentEncoding ?? path
+        // Block path traversal and absolute paths
+        guard !cleaned.hasPrefix("/"), !cleaned.hasPrefix("~"),
+              !cleaned.contains("..") else {
+            return nil
+        }
+        guard let docURL = viewModel.documentURL else { return nil }
+        let docDir = docURL.deletingLastPathComponent()
+        let resolved = docDir.appendingPathComponent(cleaned).standardizedFileURL
+        // Ensure the resolved path stays within the document's directory
+        guard resolved.path.hasPrefix(docDir.standardizedFileURL.path) else {
+            return nil
+        }
+        guard FileManager.default.fileExists(atPath: resolved.path) else {
+            return nil
+        }
+        return resolved
     }
 
     private func loadImage(source: String) -> Image? {
