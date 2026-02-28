@@ -1,6 +1,10 @@
-# Typemark
+<p align="center">
+  <img src="Sources/Typemark/Resources/Typemark.png" alt="Typemark" width="128" />
+</p>
 
-A native macOS and iPadOS Markdown editor and live preview app built with SwiftUI and Swift 6.
+<h1 align="center">Typemark</h1>
+
+<p align="center">A native macOS and iPadOS Markdown editor and live preview app built with SwiftUI and Swift 6.</p>
 
 **Bundle ID:** `com.typemark.app`
 

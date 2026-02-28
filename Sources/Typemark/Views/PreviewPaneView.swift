@@ -38,6 +38,7 @@ public struct PreviewPaneView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(24)
             }
+            .textSelection(.enabled)
             .onChange(of: scrollTarget) { _, target in
                 if let target {
                     withAnimation { proxy.scrollTo(target, anchor: .top) }
@@ -137,7 +138,6 @@ public struct PreviewPaneView: View {
         Text(code)
             .font(.system(.callout, design: .monospaced))
             .foregroundStyle(.primary.opacity(0.85))
-            .textSelection(.enabled)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
@@ -239,6 +239,13 @@ public struct PreviewPaneView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .contextMenu {
+                Button {
+                    copyImageToPasteboard(source: source)
+                } label: {
+                    Label("Copy Image", systemImage: "doc.on.doc")
+                }
+            }
         } else {
             HStack(spacing: 8) {
                 Image(systemName: "photo")
@@ -275,6 +282,26 @@ public struct PreviewPaneView: View {
             return nil
         }
         return resolved
+    }
+
+    private func copyImageToPasteboard(source: String) {
+        guard !source.hasPrefix("/"), !source.hasPrefix("~"),
+              !source.contains(".."),
+              let docURL = viewModel.documentURL else { return }
+        let docDir = docURL.deletingLastPathComponent()
+        let resolved = docDir.appendingPathComponent(source).standardizedFileURL
+        guard resolved.path.hasPrefix(docDir.standardizedFileURL.path) else { return }
+
+        #if canImport(AppKit)
+        guard let nsImage = NSImage(contentsOf: resolved) else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([nsImage])
+        #elseif canImport(UIKit)
+        guard let data = try? Data(contentsOf: resolved),
+              let uiImage = UIImage(data: data) else { return }
+        UIPasteboard.general.image = uiImage
+        #endif
     }
 
     private func loadImage(source: String) -> Image? {
